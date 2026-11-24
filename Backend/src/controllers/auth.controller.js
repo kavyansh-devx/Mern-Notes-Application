@@ -3,6 +3,13 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 require('dotenv').config();
 
+const authCookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    path: '/',
+};
+
 async function registerUser(req, res) {
     try {
         const { username, password } = req.body
@@ -31,9 +38,7 @@ async function registerUser(req, res) {
 
 
         res.cookie('token', token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            ...authCookieOptions,
             maxAge: 24 * 60 * 60 * 1000
         });
 
@@ -88,9 +93,7 @@ async function loginUser(req, res) {
         }, process.env.JWT_SECRET, { expiresIn: '1d' })
 
         res.cookie('token', token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            ...authCookieOptions,
             maxAge: 24 * 60 * 60 * 1000
         });
 
@@ -113,12 +116,7 @@ async function loginUser(req, res) {
 }
 
 async function logOutUser(req, res) {
-    res.clearCookie('token', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/'
-    });
+    res.clearCookie('token', authCookieOptions);
 
     return res.status(200).json({
         message: "User LoggedOut Successfully"

@@ -18,7 +18,8 @@ const ProtectedRoute = ({ children }) => {
         return <Navigate to="/login" replace />;
     }
 
-    return children;
+    // Remount account-scoped page state if the authenticated account changes.
+    return <div key={user.id}>{children}</div>;
 };
 
 export default ProtectedRoute;
