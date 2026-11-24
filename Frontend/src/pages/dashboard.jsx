@@ -1,5 +1,4 @@
-
-import React, { useContext, useState, useEffect, useCallback } from 'react';
+import React, { useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import api from '../service/api';
 import { LogOut, Plus, Search, LayoutGrid, List, Trash2 } from 'lucide-react';
@@ -154,7 +153,6 @@ const Dashboard = () => {
 
     const [notes, setNotes] = useState([]);
     const [search, setSearch] = useState('');
-    const [sort, setSort] = useState('newest');
     const [showModal, setShowModal] = useState(false);
     const [editingNoteId, setEditingNoteId] = useState(null);
     const [errorMessage, setErrorMessage] = useState('');
@@ -162,6 +160,8 @@ const Dashboard = () => {
     const [notesLoading, setNotesLoading] = useState(true);
     const [modalError, setModalError] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+    const [sort, setSort] = useState('newest');
+    const [view, setView] = useState('grid');
 
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -428,7 +428,7 @@ const Dashboard = () => {
                 <div className="flex items-center gap-3 rounded-xl bg-stone-900 px-4 py-3 text-sm text-white shadow-[0_6px_16px_rgba(41,37,36,0.18)] dark:bg-black">
                     <span className="text-lg">▤</span>
                     All Notes
-                    <span className="ml-auto text-xs text-gray-400">
+                    <span className="ml-auto rounded-full bg-white/15 px-2 py-0.5 text-xs text-gray-200">
                         {notes.length}
                     </span>
                 </div>
@@ -469,6 +469,7 @@ const Dashboard = () => {
                         </div>
                     </div>
 
+                    {/* Logout Button */}
                     <button
                         onClick={handleLogout}
                         className="mt-6 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-red-500 transition hover:bg-red-500/10"
@@ -481,18 +482,19 @@ const Dashboard = () => {
             </aside>
 
             {/* Main Content */}
-            <main className="px-4 py-6 sm:px-5 md:ml-64 md:px-12 md:py-10 lg:px-16">
+            <main className="relative z-10 px-4 py-6 sm:px-5 md:ml-64 md:px-12 md:py-10 lg:px-16">
 
                 {/* Header */}
                 <header className="dash-in flex items-start justify-between gap-3 border-b border-stone-300/80 pb-6 sm:items-center sm:gap-5 md:pb-8 dark:border-white/10">
 
                     <div>
                         <p className="text-xs font-medium tracking-[0.18em] text-gray-400 uppercase">
-                            Workspace / Overview
+                            {dateLabel}
                         </p>
 
-                        <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl md:text-4xl">
-                            Your notes.
+                        <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl md:text-5xl">
+                            {greeting}, <span className="font-serif italic">{username}</span>
+                            <span className="wave ml-2 text-2xl md:text-4xl">👋</span>
                         </h2>
 
                         <p className="mt-2 text-sm text-gray-500">
@@ -548,14 +550,16 @@ const Dashboard = () => {
                         </div>
                     )}
 
-                    <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+                    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
 
                         <div>
                             <h3 className="text-lg font-semibold">
                                 All Notes
                             </h3>
                             <p className="mt-1 text-sm text-gray-400">
-                                Your thoughts, organised.
+                                {search
+                                    ? `${visibleNotes.length} ${visibleNotes.length === 1 ? 'result' : 'results'} for “${search}”`
+                                    : 'Your thoughts, organised.'}
                             </p>
                         </div>
 
@@ -609,13 +613,12 @@ const Dashboard = () => {
 
                     </div>
 
-                    {/* Empty State */}
                     {notesLoading ? (
                         <div role="status" aria-label="Loading your notes" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                             {[0, 1, 2, 3, 4, 5].map(i => <SkeletonCard key={i} i={i} />)}
                             <span className="sr-only">Loading your notes…</span>
                         </div>
-                    ) : loadError ? null : filteredNotes.length === 0 ? (
+                    ) : loadError ? null : visibleNotes.length === 0 ? (
 
                         /* Empty State */
                         <div className="dash-in flex min-h-75 flex-col items-center justify-center rounded-2xl border border-dashed border-stone-300 px-6 text-center shadow-[0_8px_28px_rgba(55,45,28,0.045)] dark:border-white/15 dark:bg-[#151515]/80 dark:shadow-none" style={{ background: 'linear-gradient(to bottom, rgba(255,254,250,0.9), rgba(249,246,239,0.9))' }}>
@@ -650,7 +653,8 @@ const Dashboard = () => {
 
                         <div className={view === 'grid' ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3' : 'grid grid-cols-1 gap-4'}>
 
-                                <article
+                            {visibleNotes.map((note, i) => (
+                                <NoteCard
                                     key={note._id}
                                     note={note}
                                     index={i}
@@ -695,7 +699,7 @@ const Dashboard = () => {
                         <div className="mb-7 flex items-center justify-between">
                             <div>
                                 <h2 id="note-modal-title" className="text-xl font-semibold">
-                                    {editingNoteId ? 'Edit Note' : 'Create a note'}
+                                    {editingNoteId ? 'Edit Note' : <>Create a <span className="font-serif italic">note</span></>}
                                 </h2>
                                 <p className="mt-1 text-sm text-gray-400">
                                     {editingNoteId
@@ -710,15 +714,18 @@ const Dashboard = () => {
                                 onClick={handleCloseModal}
                                 aria-label="Close note editor"
                                 disabled={isSaving}
-                                className="text-2xl text-gray-400 hover:text-black dark:hover:text-white"
+                                className="text-2xl text-gray-400 transition hover:rotate-90 hover:text-black dark:hover:text-white"
                             >
                                 ×
                             </button>
                         </div>
 
-                        <label htmlFor="note-title" className="mb-2 block text-sm font-medium">
-                            Title
-                        </label>
+                        <div className="mb-2 flex items-center justify-between">
+                            <label htmlFor="note-title" className="block text-sm font-medium">
+                                Title
+                            </label>
+                            <span className="text-[11px] text-gray-400">{title.length}/160</span>
+                        </div>
 
                         <input
                             id="note-title"
@@ -731,9 +738,14 @@ const Dashboard = () => {
                             required
                         />
 
-                        <label htmlFor="note-description" className="mb-2 block text-sm font-medium">
-                            Description
-                        </label>
+                        <div className="mb-2 flex items-center justify-between">
+                            <label htmlFor="note-description" className="block text-sm font-medium">
+                                Description
+                            </label>
+                            <span className="text-[11px] text-gray-400">
+                                {countWords(description)} {countWords(description) === 1 ? 'word' : 'words'}
+                            </span>
+                        </div>
 
                         <textarea
                             id="note-description"
@@ -750,7 +762,7 @@ const Dashboard = () => {
                                 type="button"
                                 onClick={handleCloseModal}
                                 disabled={isSaving}
-                                className="flex-1 rounded-xl border border-black/10 py-3 text-sm font-medium transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:hover:bg-white/5"
+                                className="flex-1 rounded-xl border border-black/10 py-3 text-sm font-medium transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-white/5"
                             >
                                 Cancel
                             </button>
