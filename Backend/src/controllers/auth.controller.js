@@ -29,12 +29,14 @@ async function registerUser(req, res) {
             id: user._id
         }, process.env.JWT_SECRET, { expiresIn: '1d' })
 
-        res.cookie('token' , token , {
-            httpOnly : true,
-            secure : process.env.NODE_ENV === "production",
-            sameSite : 'lax',
-            maxAge : 24 * 60 * 60 * 1000
-        })
+
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            maxAge: 24 * 60 * 60 * 1000
+        });
+
 
         res.status(201).json({
             message: "User Created",
@@ -85,11 +87,11 @@ async function loginUser(req, res) {
             id: user._id
         }, process.env.JWT_SECRET, { expiresIn: '1d' })
 
-        res.cookie('token' , token , {
-            httpOnly : true,
-            secure : process.env.NODE_ENV === "production",
-            sameSite : 'lax',
-            maxAge : 24 * 60 * 60 * 1000
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: 'lax',
+            maxAge: 24 * 60 * 60 * 1000
         })
 
         return res.status(200).json({
@@ -123,30 +125,30 @@ async function logOutUser(req, res) {
     });
 }
 
-async function getCurrentUser(req,res){
-    try{
+async function getCurrentUser(req, res) {
+    try {
         const userId = req.user.id
-    
+
         const user = await userModel.findById(userId)
-        if(!user){
+        if (!user) {
             return res.status(404).json({
-                message : "User dosen't Exist!"
+                message: "User dosen't Exist!"
             })
         }
-    
+
         res.status(200).json({
-            message : "User Fetched",
-            user : {
-                id : user._id,
-                username : user.username
+            message: "User Fetched",
+            user: {
+                id: user._id,
+                username: user.username
             }
         })
-    } catch (err){
+    } catch (err) {
         res.status(500).json({
-            error : "Internal Server Error",
+            error: "Internal Server Error",
             err
         })
     }
 }
 
-module.exports = { registerUser, loginUser  , logOutUser , getCurrentUser}
+module.exports = { registerUser, loginUser, logOutUser, getCurrentUser }
